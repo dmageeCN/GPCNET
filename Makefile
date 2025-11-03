@@ -1,7 +1,10 @@
-CFLAGS = -I .
+# MAKEFILE FOR GPCNET
+
 LIBS = -lm
-CC = cc
-FLAGS = 
+CC ?= cc
+PREFIX ?= /usr
+FLAGS ?= 
+CFLAGS += -I .
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS) $(FLAGS)
@@ -15,6 +18,10 @@ load: network_load_test.o random_ring.o collectives.o subcomms.o utils.o congest
 default: network
 
 all: network load
+
+install: all
+	install -Dm755 "network_test" "$(PREFIX)/bin/network_test"
+	install -Dm755 "network_load_test" "$(PREFIX)/bin/network_load_test"
 
 clean:
 	rm -f *.o
