@@ -648,6 +648,7 @@ int main(int argc, char* argv[])
      build_subcomms(NUM_CONGESTOR_TESTS, &test_config, &nodes, &am_congestor, &congestor_set, &congestor_comm,
                     &test_comm, &local_comm, &nt_nodes, &nc_nodes);
      if (am_congestor) {
+          setenv("FI_OPX_ROUTE_CONTROL", "0:0:0:0:0:0", 1);
           init_rma(&test_config, congestor_comm);
      } else {
           init_rma(&test_config, test_comm);
