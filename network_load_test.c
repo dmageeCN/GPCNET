@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <getopt.h>
 #include <network_test.h>
 
 #define VERSION 1.3
@@ -642,13 +643,27 @@ int main(int argc, char* argv[])
      CommNodes_t nodes;
      MPI_Comm local_comm, test_comm, congestor_comm;
      int i, am_congestor, congestor_set, nt_nodes, nc_nodes;
+     char *route_control = NULL;
+     int opt;
+
+     while ((opt = getopt(argc, argv, "r:")) != -1) {
+          switch (opt) {
+          case 'r':
+               route_control = optarg;
+               break;
+          default:
+               fprintf(stderr, "Usage: %s [-r FI_OPX_ROUTE_CONTROL]\n", argv[0]);
+               return 1;
+          }
+     }
 
      init_mpi(&test_config, &nodes, &argc, &argv, BW_MSG_COUNT, BW_MSG_COUNT, A2A_MSG_COUNT,
               INCAST_MSG_COUNT, BCAST_MSG_COUNT, ALLREDUCE_MSG_COUNT, BW_OUTSTANDING);
      build_subcomms(NUM_CONGESTOR_TESTS, &test_config, &nodes, &am_congestor, &congestor_set, &congestor_comm,
                     &test_comm, &local_comm, &nt_nodes, &nc_nodes);
      if (am_congestor) {
-          setenv("FI_OPX_ROUTE_CONTROL", "0:0:0:0:0:0", 1);
+          if (route_control != NULL)
+               setenv("FI_OPX_ROUTE_CONTROL", route_control, 1);
           init_rma(&test_config, congestor_comm);
      } else {
           init_rma(&test_config, test_comm);
