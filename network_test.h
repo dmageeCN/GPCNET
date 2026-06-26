@@ -22,6 +22,10 @@
 #include <string.h>
 #include <time.h>
 #include <stdint.h>
+#include <rdma/fabric.h>
+#include <rdma/fi_domain.h>
+#include <numa.h>
+#include <sched.h>
 
 #define RSEED 8675309
 
@@ -149,6 +153,9 @@ int congestion_subcomms(CommConfig_t *config, CommNodes_t *nodes, int *congestor
                         int list_size, int *am_congestor, MPI_Comm *subcomm);
 
 /* utils.c */
+int get_socket_id(int cpu);
+int get_hfi_numa_node(const char *domain_name);
+void determine_hfi(char *out, size_t outlen, int proc_numa_node, int proc_socket);
 void die(char *errmsg);
 void mpi_error(int ierr);
 int init_mpi(CommConfig_t *config, CommNodes_t *nodes, int *argc, char ***argv, int rmacnt,

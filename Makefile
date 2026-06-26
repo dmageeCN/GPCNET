@@ -1,6 +1,6 @@
 # MAKEFILE FOR GPCNET
 
-LIBS = -lm
+LIBS = -lm -lnuma -lfabric
 CC ?= cc
 PREFIX ?= /usr
 FLAGS ?= 

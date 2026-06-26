@@ -19,6 +19,96 @@
 #include <string.h>
 #include <network_test.h>
 
+static int read_long_from_file(const char *path, long *out) {
+     FILE *f = fopen(path, "r");
+     if (!f) return -1;
+     int n = fscanf(f, "%ld", out);
+     fclose(f);
+     return (n == 1) ? 0 : -1;
+}
+
+static int get_numa_first_cpu(int numa_node) {
+     char path[160];
+     long cpu = -1;
+     snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/cpulist", numa_node);
+     read_long_from_file(path, &cpu);
+     return (int)cpu;
+}
+
+int get_socket_id(int cpu) {
+     char path[160];
+     long val;
+     snprintf(path, sizeof(path),
+              "/sys/devices/system/cpu/cpu%d/topology/physical_package_id", cpu);
+     return (read_long_from_file(path, &val) == 0) ? (int)val : -1;
+}
+
+int get_hfi_numa_node(const char *domain_name) {
+     char path[256];
+     long val;
+     snprintf(path, sizeof(path),
+              "/sys/class/infiniband/%s/device/numa_node", domain_name);
+     return (read_long_from_file(path, &val) == 0) ? (int)val : -1;
+}
+
+void determine_hfi(char *out, size_t outlen, int proc_numa_node, int proc_socket) {
+     long forced_unit;
+     const char *env_val = getenv("FI_OPX_HFI_SELECT");
+
+     if (env_val && *env_val != '\0') {
+          char *endptr;
+          long val = strtol(env_val, &endptr, 10);
+          if (endptr != env_val && *endptr == '\0' && val >= 0) {
+               snprintf(out, outlen, "hfi1_%ld(forced)", val);
+               return;
+          }
+     }
+
+     struct fi_info *hints = fi_allocinfo();
+     if (!hints) { snprintf(out, outlen, "unknown(alloc-fail)"); return; }
+     hints->fabric_attr->prov_name = strdup("opx");
+     hints->ep_attr->type = FI_EP_RDM;
+
+     struct fi_info *info = NULL;
+     int ret = fi_getinfo(FI_VERSION(1, 18), NULL, NULL, 0, hints, &info);
+     fi_freeinfo(hints);
+     if (ret) { snprintf(out, outlen, "unknown(fi_getinfo-fail)"); return; }
+
+     const char *fallback     = NULL;
+     const char *numa_match   = NULL;
+     const char *socket_match = NULL;
+
+     for (struct fi_info *cur = info; cur; cur = cur->next) {
+          const char *dname = cur->domain_attr->name;
+          if (!fallback) fallback = dname;
+
+          int dev_numa = get_hfi_numa_node(dname);
+          if (dev_numa < 0) continue;
+
+          if (dev_numa == proc_numa_node) {
+               numa_match = dname;
+               break;
+          }
+
+          if (!socket_match && proc_socket >= 0) {
+               int first_cpu = get_numa_first_cpu(dev_numa);
+               if (first_cpu >= 0 && get_socket_id(first_cpu) == proc_socket)
+                    socket_match = dname;
+          }
+     }
+
+     if (numa_match)
+          snprintf(out, outlen, "%s", numa_match);
+     else if (socket_match)
+          snprintf(out, outlen, "%s(socket-local)", socket_match);
+     else if (fallback)
+          snprintf(out, outlen, "%s(best-guess)", fallback);
+     else
+          snprintf(out, outlen, "none-found");
+
+     fi_freeinfo(info);
+}
+
 /* these establish the size of the table written to STDOUT */
 #ifdef VERBOSE
 #define TBLSIZE 140
