@@ -644,21 +644,36 @@ int main(int argc, char* argv[])
      MPI_Comm local_comm, test_comm, congestor_comm;
      int i, am_congestor, congestor_set, nt_nodes, nc_nodes;
      char *route_control = NULL;
+     SplitBy_t splitter = SPLIT_HOST;
      int opt;
 
-     while ((opt = getopt(argc, argv, "r:")) != -1) {
+     static struct option long_opts[] = {
+          {"splitter", required_argument, 0, 's'},
+          {0, 0, 0, 0}
+     };
+     while ((opt = getopt_long(argc, argv, "r:s:", long_opts, NULL)) != -1) {
           switch (opt) {
           case 'r':
                route_control = optarg;
                break;
+          case 's':
+               if      (strcmp(optarg, "nic")    == 0) splitter = SPLIT_NIC;
+               else if (strcmp(optarg, "socket") == 0) splitter = SPLIT_SOCKET;
+               else if (strcmp(optarg, "numa")   == 0) splitter = SPLIT_NUMA;
+               else if (strcmp(optarg, "host")   == 0) splitter = SPLIT_HOST;
+               else {
+                    fprintf(stderr, "Usage: %s [-r FI_OPX_ROUTE_CONTROL] [--splitter {host,nic,socket,numa}]\n", argv[0]);
+                    return 1;
+               }
+               break;
           default:
-               fprintf(stderr, "Usage: %s [-r FI_OPX_ROUTE_CONTROL]\n", argv[0]);
+               fprintf(stderr, "Usage: %s [-r FI_OPX_ROUTE_CONTROL] [--splitter {host,nic,socket,numa}]\n", argv[0]);
                return 1;
           }
      }
 
      init_mpi(&test_config, &nodes, &argc, &argv, BW_MSG_COUNT, BW_MSG_COUNT, A2A_MSG_COUNT,
-              INCAST_MSG_COUNT, BCAST_MSG_COUNT, ALLREDUCE_MSG_COUNT, BW_OUTSTANDING);
+              INCAST_MSG_COUNT, BCAST_MSG_COUNT, ALLREDUCE_MSG_COUNT, BW_OUTSTANDING, splitter);
      build_subcomms(NUM_CONGESTOR_TESTS, &test_config, &nodes, &am_congestor, &congestor_set, &congestor_comm,
                     &test_comm, &local_comm, &nt_nodes, &nc_nodes);
      if (am_congestor) {

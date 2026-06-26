@@ -145,7 +145,8 @@ int cstring_cmp(const void *a, const void *b)
 
 /* initialize MPI, detect node+rank layout, and setup various testing options  */
 int init_mpi(CommConfig_t *config, CommNodes_t *nodes, int *argc, char ***argv, int rmacnt, int p2pcnt,
-             int a2acnt, int incastcnt, int bcastcnt, int allreducecnt, int bw_outstanding)
+             int a2acnt, int incastcnt, int bcastcnt, int allreducecnt, int bw_outstanding,
+             SplitBy_t splitter)
 {
      int i, ierr, nranks, hname_len;
      char local_hname[MPI_MAX_PROCESSOR_NAME], last_hname[MPI_MAX_PROCESSOR_NAME];
@@ -187,6 +188,28 @@ int init_mpi(CommConfig_t *config, CommNodes_t *nodes, int *argc, char ***argv, 
      }
 
      mpi_error(MPI_Get_processor_name(local_hname, &hname_len));
+
+     if (splitter != SPLIT_HOST) {
+          char base[MPI_MAX_PROCESSOR_NAME];
+          char *dot = strchr(local_hname, '.');
+          int baselen = dot ? (int)(dot - local_hname) : (int)strlen(local_hname);
+          snprintf(base, sizeof(base), "%.*s", baselen, local_hname);
+
+          int cpu      = sched_getcpu();
+          int sock     = get_socket_id(cpu);
+          int numanode = (numa_available() != -1) ? numa_node_of_cpu(cpu) : -1;
+
+          if (splitter == SPLIT_NIC) {
+               char hfi[40];
+               determine_hfi(hfi, sizeof(hfi), numanode, sock);
+               snprintf(local_hname, MPI_MAX_PROCESSOR_NAME, "%s_nic%s", base, hfi);
+          } else if (splitter == SPLIT_SOCKET) {
+               snprintf(local_hname, MPI_MAX_PROCESSOR_NAME, "%s_socket%d", base, sock);
+          } else if (splitter == SPLIT_NUMA) {
+               snprintf(local_hname, MPI_MAX_PROCESSOR_NAME, "%s_numa%d", base, numanode, numanode);
+          }
+     }
+
      mpi_error(MPI_Allgather(local_hname, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, all_hnames,
                              MPI_MAX_PROCESSOR_NAME, MPI_CHAR, MPI_COMM_WORLD));
 

@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <getopt.h>
 #include <network_test.h>
 
 #define VERSION 1.3
@@ -123,9 +124,33 @@ int main(int argc, char* argv[])
      char tname[nl], tunits[nl];
      int itest, niters, ntests, nrands, i;
      int *allnodes;
+     SplitBy_t splitter = SPLIT_HOST;
+
+     static struct option long_opts[] = {
+          {"splitter", required_argument, 0, 's'},
+          {0, 0, 0, 0}
+     };
+     int opt;
+     while ((opt = getopt_long(argc, argv, "s:", long_opts, NULL)) != -1) {
+          switch (opt) {
+          case 's':
+               if      (strcmp(optarg, "nic")    == 0) splitter = SPLIT_NIC;
+               else if (strcmp(optarg, "socket") == 0) splitter = SPLIT_SOCKET;
+               else if (strcmp(optarg, "numa")   == 0) splitter = SPLIT_NUMA;
+               else if (strcmp(optarg, "host")   == 0) splitter = SPLIT_HOST;
+               else {
+                    fprintf(stderr, "Usage: %s [--splitter {host,nic,socket,numa}]\n", argv[0]);
+                    return 1;
+               }
+               break;
+          default:
+               fprintf(stderr, "Usage: %s [--splitter {host,nic,socket,numa}]\n", argv[0]);
+               return 1;
+          }
+     }
 
      init_mpi(&test_config, &nodes, &argc, &argv, BW_MSG_COUNT, BW_MSG_COUNT, A2A_MSG_COUNT,
-              1, 1, 1, BW_OUTSTANDING);
+              1, 1, 1, BW_OUTSTANDING, splitter);
 
      if (nodes.nnodes < 2) {
           if (test_config.myrank == 0) {

@@ -87,6 +87,13 @@ typedef struct CommConfig_st {
      int mynode_rank;
 } CommConfig_t;
 
+typedef enum SplitBy_st {
+     SPLIT_HOST = 0,
+     SPLIT_NIC,
+     SPLIT_SOCKET,
+     SPLIT_NUMA
+} SplitBy_t;
+
 typedef enum CommTest_st
 {
      P2P_LATENCY = 0,
@@ -159,7 +166,8 @@ void determine_hfi(char *out, size_t outlen, int proc_numa_node, int proc_socket
 void die(char *errmsg);
 void mpi_error(int ierr);
 int init_mpi(CommConfig_t *config, CommNodes_t *nodes, int *argc, char ***argv, int rmacnt,
-             int p2pcnt, int a2acnt, int incastcnt, int bcastcnt, int allreducecnt, int bw_outstanding);
+             int p2pcnt, int a2acnt, int incastcnt, int bcastcnt, int allreducecnt, int bw_outstanding,
+             SplitBy_t splitter);
 int init_rma(CommConfig_t *config, MPI_Comm comm);
 int init_rma_a2a(CommConfig_t *config, MPI_Comm comm);
 int a2a_buffers(CommConfig_t *config, MPI_Comm subcomm);
