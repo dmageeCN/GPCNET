@@ -686,7 +686,7 @@ int main(int argc, char* argv[])
 
      if (test_config.myrank == 0) {
           printf("NetworkLoad Tests v%3.1f\n", VERSION);
-          printf("  Test with %i MPI ranks (%i nodes)\n", test_config.nranks, nodes.nnodes);
+          printf("  Test with %i MPI ranks (%i nodes, %i comms)\n", test_config.nranks, nodes.nphys_nodes, nodes.nnodes);
           printf("  %i nodes running Network Tests\n", nt_nodes);
           printf("  %i nodes running Congestion Tests (min %i nodes per congestor)\n\n", nc_nodes, (int)floor((double)nc_nodes/NUM_CONGESTOR_TESTS));
           printf("  Legend\n   RR = random ring communication pattern\n   Lat = latency\n   BW = bandwidth\n   BW+Sync = bandwidth with barrier");

@@ -4,7 +4,7 @@ LIBS = -lm -lnuma -lfabric
 CC ?= cc
 PREFIX ?= /usr
 FLAGS ?= 
-CFLAGS += -I .
+CFLAGS += -I . -D_GNU_SOURCE
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS) $(FLAGS)

@@ -62,6 +62,7 @@ typedef struct CommNodes_st {
      CommNode_t *nodes;
      CommNode_t *nodes_head;
      int nnodes;
+     int nphys_nodes;
 } CommNodes_t;
 
 typedef struct CommConfig_st {

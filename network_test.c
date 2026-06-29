@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
 
      if (test_config.myrank == 0) {
           printf("Network Tests v%3.1f\n", VERSION);
-          printf("  Test with %i MPI ranks (%i nodes)\n\n", test_config.nranks, nodes.nnodes);
+          printf("  Test with %i MPI ranks (%i nodes, %i comms)\n\n", test_config.nranks, nodes.nphys_nodes, nodes.nnodes);
           printf("  Legend\n   RR = random ring communication pattern\n   Nat = natural ring communication pattern\n   Lat = latency\n   BW = bandwidth\n   BW+Sync = bandwidth with barrier");
      }
 

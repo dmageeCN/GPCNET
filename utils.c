@@ -217,6 +217,29 @@ int init_mpi(CommConfig_t *config, CommNodes_t *nodes, int *argc, char ***argv, 
           memcpy(sort_all_hnames[i], &all_hnames[i*MPI_MAX_PROCESSOR_NAME], MPI_MAX_PROCESSOR_NAME);
      }
 
+     /* count unique physical hostnames (base before any splitter suffix) */
+     char **sort_phys = malloc(sizeof(char *) * config->nranks);
+     if (sort_phys == NULL) die("Failed to allocate sort_phys in init_mpi()\n");
+     for (i = 0; i < config->nranks; i++) {
+          sort_phys[i] = malloc(MPI_MAX_PROCESSOR_NAME);
+          if (sort_phys[i] == NULL) die("Failed to allocate sort_phys[] in init_mpi()\n");
+          char *src = &all_hnames[i * MPI_MAX_PROCESSOR_NAME];
+          char *dot = strchr(src, '.');
+          int len = dot ? (int)(dot - src) : (int)strlen(src);
+          snprintf(sort_phys[i], MPI_MAX_PROCESSOR_NAME, "%.*s", len, src);
+     }
+     qsort(sort_phys, config->nranks, sizeof(char *), cstring_cmp);
+     nodes->nphys_nodes = 0;
+     char last_phys[MPI_MAX_PROCESSOR_NAME] = {0};
+     for (i = 0; i < config->nranks; i++) {
+          if (strncmp(last_phys, sort_phys[i], MPI_MAX_PROCESSOR_NAME) != 0) {
+               nodes->nphys_nodes++;
+               strncpy(last_phys, sort_phys[i], MPI_MAX_PROCESSOR_NAME);
+          }
+          free(sort_phys[i]);
+     }
+     free(sort_phys);
+
      /* generate the list of unqiue nodes */
      qsort(sort_all_hnames, config->nranks, sizeof(char *), cstring_cmp);
      nodes->nnodes = 0;
