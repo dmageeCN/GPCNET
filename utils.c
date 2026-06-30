@@ -74,38 +74,36 @@ void determine_hfi(char *out, size_t outlen, int proc_numa_node, int proc_socket
      fi_freeinfo(hints);
      if (ret) { snprintf(out, outlen, "unknown(fi_getinfo-fail)"); return; }
 
-     const char *fallback     = NULL;
-     const char *numa_match   = NULL;
-     const char *socket_match = NULL;
+     const char *best = NULL;
 
      for (struct fi_info *cur = info; cur; cur = cur->next) {
           const char *dname = cur->domain_attr->name;
-          if (!fallback) fallback = dname;
 
           int dev_numa = get_hfi_numa_node(dname);
-          if (dev_numa < 0) continue;
-
           if (dev_numa == proc_numa_node) {
-               numa_match = dname;
+               best = dname;
                break;
           }
 
-          if (!socket_match && proc_socket >= 0) {
+          if (!best) {
+               best = dname;
+          } else if (dev_numa >= 0 && proc_socket >= 0) {
                int first_cpu = get_numa_first_cpu(dev_numa);
-               if (first_cpu >= 0 && get_socket_id(first_cpu) == proc_socket)
-                    socket_match = dname;
+               if (first_cpu >= 0 && get_socket_id(first_cpu) == proc_socket) {
+                    int cur_numa = get_hfi_numa_node(best);
+                    int cur_first = get_numa_first_cpu(cur_numa);
+                    if (cur_first < 0 || get_socket_id(cur_first) != proc_socket)
+                         best = dname;
+               }
           }
      }
 
-     if (numa_match)
-          snprintf(out, outlen, "%s", numa_match);
-     else if (socket_match)
-          snprintf(out, outlen, "%s(socket-local)", socket_match);
-     else if (fallback)
-          snprintf(out, outlen, "%s(best-guess)", fallback);
-     else
-          snprintf(out, outlen, "none-found");
+     if (!best) {
+          fi_freeinfo(info);
+          die("determine_hfi: no HFI devices found");
+     }
 
+     snprintf(out, outlen, "%s", best);
      fi_freeinfo(info);
 }
 
@@ -240,7 +238,7 @@ int init_mpi(CommConfig_t *config, CommNodes_t *nodes, int *argc, char ***argv, 
      }
      free(sort_phys);
 
-     /* generate the list of unqiue nodes */
+     /* generate the list of unique nodes */
      qsort(sort_all_hnames, config->nranks, sizeof(char *), cstring_cmp);
      nodes->nnodes = 0;
      nodes->nodes_head = NULL;
