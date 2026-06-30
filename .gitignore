@@ -1,0 +1,3 @@
+*.o
+network_load_test
+network_test
